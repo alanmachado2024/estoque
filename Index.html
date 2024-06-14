@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Estoque</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            margin-top: 50px;
+            width: 80%;
+            max-width: 800px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .form-container, .search-container {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .form-container input[type="text"] {
+            text-transform: uppercase; /* Converte entrada para maiúsculas */
+        }
+
+        .form-container input, .form-container select, .form-container button,
+        .search-container input, .search-container button {
+            margin: 5px 0;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        .form-container button, .search-container button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .form-container button:hover, .search-container button:hover {
+            background-color: #218838;
+        }
+
+        .stats {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .stats .line {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .stats div {
+            margin: 10px;
+        }
+
+        .stats div span {
+            font-weight: bold;
+        }
+
+        .boards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .board {
+            position: relative;
+            padding: 20px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: calc(33.333% - 10px);
+            box-sizing: border-box;
+        }
+
+        .board h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .board p {
+            font-size: 16px;
+            margin: 5px 0 10px; /* Ajuste de margem para o nome do endereço */
+        }
+
+        .board .status-menu {
+            margin-bottom: 10px; /* Espaço abaixo do campo de alteração de status */
+        }
+
+        .board .status-menu select {
+            padding: 5px;
+            font-size: 14px;
+        }
+
+        .indicator {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ccc;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .indicator.green {
+            background-color: #28a745;
+        }
+
+        .indicator.red {
+            background-color: #dc3545;
+        }
+
+        .no-results {
+            display: none;
+            text-align: center;
+            font-size: 18px;
+            color: #999;
+            margin-top: 20px;
+        }
+
+        .delete-button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-top: 10px; /* Espaço acima do botão de exclusão */
+        }
+
+        .delete-button:hover {
+            background-color: #c82333;
+        }
+
+        .details-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-top: 10px; /* Espaço acima do botão de detalhes */
+        }
+
+        .details-button:hover {
+            background-color: #0056b3;
+        }
+
+        .details-container {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .details-container textarea {
+            width: 100%;
+            height: 50px;
+            margin-bottom: 10px;
+        }
+
+        .details-container input, .details-container textarea, .details-container button {
+            font-size: 14px;
+        }
+
+        .details-container button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .details-container button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gerenciamento de Estoque</h1>
+        <div class="form-container">
+            <input type="text" id="address" placeholder="Nome do Endereço (Ex: PPF0101)" maxlength="8">
+            <select id="status">
+                <option value="VAZIO">VAZIO</option>
+                <option value="EM USO">EM USO</option>
+                <option value="CHEIO">CHEIO</option>
+            </select>
+            <button onclick="addBoard()">Adicionar Quadro</button>
+        </div>
+        <div class="search-container">
+            <input type="text" id="searchQuery" placeholder="Buscar por Endereço ou Status" oninput="searchBoards()">
+        </div>
+        <div class="stats" id="stats">
+            <div class="line">
+                <div><span id="palletsEmptyCount">0</span> Vazios (Porta Pallets)</div>
+                <div><span id="palletsInUseCount">0</span> Em Uso (Porta Pallets)</div>
+                <div><span id="palletsFullCount">0</span> Cheios (Porta Pallets)</div>
+                <div><span id="palletsOccupancy">0</span>% de Ocupação (Porta Pallets)</div>
+            </div>
+            <div class="line">
+                <div><span id="shelvesEmptyCount">0</span> Vazios (Prateleiras)</div>
+                <div><span id="shelvesInUseCount">0</span> Em Uso (Prateleiras)</div>
+                <div><span id="shelvesFullCount">0</span> Cheios (Prateleiras)</div>
+                <div><span id="shelvesOccupancy">0</span>% de Ocupação (Prateleiras)</div>
+            </div>
+        </div>
+        <div class="boards" id="boards"></div>
+        <div class="no-results" id="noResults">Nenhum resultado encontrado.</div>
+    </div>
+    <script>
+        let addressList = []; // Lista para armazenar os nomes dos endereços
+
+        function addBoard() {
+            let address = document.getElementById('address').value.trim().toUpperCase(); // Convertendo para maiúsculas
+            const status = document.getElementById('status').value;
+            const typePrompt = prompt('O quadro é Porta Pallets (digitar 1) ou Prateleiras (digitar 2)?');
+
+            let type;
+            if (typePrompt === '1') {
+                type = 'porta pallets';
+            } else if (typePrompt === '2') {
+                type = 'prateleiras';
+            } else {
+                alert('Tipo inválido. Digite 1 para Porta Pallets ou 2 para Prateleiras.');
+                return;
+            }
+
+            const regex = /^[A-Z]{3}\d{2}\d{2}$/;
+
+            if (address === '') {
+                alert('Por favor, insira o nome do endereço.');
+                return;
+            }
+
+            if (!regex.test(address)) {
+                alert('O nome do endereço deve seguir o padrão 3 letras, 2 números, 2 números (ex: PPF0101).');
+                return;
+            }
+
+            if (addressList.includes(address)) {
+                alert('Já existe um endereço com esse nome.');
+                return;
+            }
+
+            addressList.push(address); // Adiciona o novo endereço à lista
+
+            const boardContainer = document.getElementById('boards');
+
+            const board = document.createElement('div');
+            board.className = 'board';
+            board.setAttribute('data-address', address);
+            board.setAttribute('data-status', status);
+            board.setAttribute('data-type', type);
+
+            const boardTitle = document.createElement('h2');
+            boardTitle.textContent = address;
+
+            const boardStatus = document.createElement('p');
+            boardStatus.textContent = `Status: ${status}`;
+
+            const statusMenu = document.createElement('div');
+            statusMenu.className = 'status-menu';
+            const statusSelect = document.createElement('select');
+            statusSelect.innerHTML = `
+                <option value="VAZIO" ${status === 'VAZIO' ? 'selected' : ''}>VAZIO</option>
+                <option value="EM USO" ${status === 'EM USO' ? 'selected' : ''}>EM USO</option>
+                <option value="CHEIO" ${status === 'CHEIO' ? 'selected' : ''}>CHEIO</option>
+            `;
+            statusSelect.onchange = () => changeStatus(statusSelect);
+            statusMenu.appendChild(statusSelect);
+
+            const indicator = document.createElement('div');
+            indicator.className = 'indicator';
+            if (status === 'EM USO') {
+                indicator.classList.add('green');
+            } else if (status === 'CHEIO') {
+                indicator.classList.add('red');
+            }
+
+            const detailsButton = document.createElement('button');
+            detailsButton.className = 'details-button';
+            detailsButton.textContent = 'Ver Produtos';
+            detailsButton.onclick = () => toggleDetails(board);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-button';
+            deleteButton.textContent = 'Excluir';
+            deleteButton.onclick = () => {
+                const password = prompt('Digite a senha para excluir:');
+                if (password === 'gestao2024') {
+                    boardContainer.removeChild(board);
+                    addressList = addressList.filter(addr => addr !== address); // Remove o endereço da lista
+                    updateStats(); // Atualiza estatísticas após exclusão
+                    searchBoards(); // Atualiza resultados da busca após exclusão
+                } else {
+                    alert('Senha incorreta. A exclusão foi cancelada.');
+                }
+            };
+
+            const detailsContainer = document.createElement('div');
+            detailsContainer.className = 'details-container';
+
+            const briefDescription = document.createElement('textarea');
+            briefDescription.placeholder = 'Descrição breve';
+            const observation = document.createElement('textarea');
+            observation.placeholder = 'Observação';
+
+            const saveDetailsButton = document.createElement('button');
+            saveDetailsButton.textContent = 'Salvar';
+            saveDetailsButton.onclick = () => saveDetails(board, briefDescription.value, observation.value);
+
+            detailsContainer.appendChild(briefDescription);
+            detailsContainer.appendChild(observation);
+            detailsContainer.appendChild(saveDetailsButton);
+
+            board.appendChild(boardTitle);
+            board.appendChild(statusMenu);
+            board.appendChild(boardStatus);
+            board.appendChild(indicator);
+            board.appendChild(detailsButton);
+            board.appendChild(detailsContainer);
+            board.appendChild(deleteButton);
+            boardContainer.appendChild(board);
+
+            document.getElementById('address').value = '';
+            document.getElementById('status').value = 'VAZIO';
+
+            // Atualiza estatísticas e resultados da busca
+            updateStats();
+            searchBoards();
+        }
+
+        function changeStatus(select) {
+            const board = select.closest('.board');
+            const status = select.value;
+            board.setAttribute('data-status', status);
+
+            const indicator = board.querySelector('.indicator');
+            indicator.classList.remove('green', 'red');
+
+            if (status === 'EM USO') {
+                indicator.classList.add('green');
+            } else if (status === 'CHEIO') {
+                indicator.classList.add('red');
+            }
+
+            board.querySelector('p').textContent = `Status: ${status}`;
+
+            // Atualiza estatísticas após alterar o status
+            updateStats();
+            searchBoards(); // Atualiza resultados da busca após alterar o status
+        }
+
+        function updateStats() {
+            const palletsEmptyCount = document.getElementById('palletsEmptyCount');
+            const palletsInUseCount = document.getElementById('palletsInUseCount');
+            const palletsFullCount = document.getElementById('palletsFullCount');
+            const palletsOccupancy = document.getElementById('palletsOccupancy');
+
+            const shelvesEmptyCount = document.getElementById('shelvesEmptyCount');
+            const shelvesInUseCount = document.getElementById('shelvesInUseCount');
+            const shelvesFullCount = document.getElementById('shelvesFullCount');
+            const shelvesOccupancy = document.getElementById('shelvesOccupancy');
+
+            const boards = document.querySelectorAll('.board');
+            let palletsEmpty = 0;
+            let palletsInUse = 0;
+            let palletsFull = 0;
+
+            let shelvesEmpty = 0;
+            let shelvesInUse = 0;
+            let shelvesFull = 0;
+
+            boards.forEach(board => {
+                const status = board.getAttribute('data-status');
+                const type = board.getAttribute('data-type');
+
+                if (type === 'porta pallets') {
+                    if (status === 'VAZIO') {
+                        palletsEmpty++;
+                    } else if (status === 'EM USO') {
+                        palletsInUse++;
+                    } else if (status === 'CHEIO') {
+                        palletsFull++;
+                    }
+                } else if (type === 'prateleiras') {
+                    if (status === 'VAZIO') {
+                        shelvesEmpty++;
+                    } else if (status === 'EM USO') {
+                        shelvesInUse++;
+                    } else if (status === 'CHEIO') {
+                        shelvesFull++;
+                    }
+                }
+            });
+
+            const totalPallets = palletsEmpty + palletsInUse + palletsFull;
+            const palletsOccupancyPercentage = totalPallets > 0 ? Math.round((palletsInUse + palletsFull) / totalPallets * 100) : 0;
+
+            const totalShelves = shelvesEmpty + shelvesInUse + shelvesFull;
+            const shelvesOccupancyPercentage = totalShelves > 0 ? Math.round((shelvesInUse + shelvesFull) / totalShelves * 100) : 0;
+
+            palletsEmptyCount.textContent = palletsEmpty;
+            palletsInUseCount.textContent = palletsInUse;
+            palletsFullCount.textContent = palletsFull;
+            palletsOccupancy.textContent = palletsOccupancyPercentage;
+
+            shelvesEmptyCount.textContent = shelvesEmpty;
+            shelvesInUseCount.textContent = shelvesInUse;
+            shelvesFullCount.textContent = shelvesFull;
+            shelvesOccupancy.textContent = shelvesOccupancyPercentage;
+        }
+
+        function searchBoards() {
+            const query = document.getElementById('searchQuery').value.toLowerCase();
+            const boards = document.querySelectorAll('.board');
+            let hasResults = false;
+
+            boards.forEach(board => {
+                const address = board.getAttribute('data-address').toLowerCase();
+                const status = board.getAttribute('data-status').toLowerCase();
+                const type = board.getAttribute('data-type').toLowerCase();
+
+                if (address.includes(query) || status.includes(query) || type.includes(query)) {
+                    board.style.display = 'block';
+                    hasResults = true;
+                } else {
+                    board.style.display = 'none';
+                }
+            });
+
+            document.getElementById('noResults').style.display = hasResults ? 'none' : 'block';
+        }
+
+        function toggleDetails(board) {
+            const detailsContainer = board.querySelector('.details-container');
+            detailsContainer.style.display = detailsContainer.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function saveDetails(board, description, observation) {
+            board.setAttribute('data-description', description);
+            board.setAttribute('data-observation', observation);
+            toggleDetails(board); // Esconde o formulário após salvar
+        }
+    </script>
+</body>
+</html>
